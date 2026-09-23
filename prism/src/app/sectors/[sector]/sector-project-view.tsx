@@ -52,7 +52,7 @@ export function SectorProjectView({ sector, projects }: SectorProjectViewProps) 
       {/* ── Breadcrumbs & Header ────────────────────────────────────── */}
       <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.8rem", color: "var(--text-muted)" }}>
-          <Link href="/" style={{ color: "var(--brand-blue)", fontWeight: 500 }}>
+          <Link href="/dashboard" style={{ color: "var(--brand-blue)", fontWeight: 500 }}>
             Dashboard
           </Link>
           <span>&gt;</span>

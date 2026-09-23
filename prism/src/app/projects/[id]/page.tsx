@@ -72,7 +72,7 @@ export default async function ProjectDetailPage({ params }: ProjectDetailProps) 
       <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
         {/* Breadcrumb Navigation */}
         <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.8rem", color: "var(--text-muted)" }}>
-          <Link href="/" style={{ color: "var(--brand-blue)" }}>Command Center</Link>
+          <Link href="/dashboard" style={{ color: "var(--brand-blue)" }}>Command Center</Link>
           <span>/</span>
           <Link href="/projects" style={{ color: "var(--brand-blue)" }}>Projects</Link>
           <span>/</span>

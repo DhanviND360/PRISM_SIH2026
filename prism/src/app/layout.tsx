@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Sidebar, Topbar } from "@/components";
+import { AppLayoutWrapper } from "@/components";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PRISM — Predictive Risk Intelligence for Smart Monitoring | MoSPI",
+  title: "PRISM — Anticipate Risks. Deliver a Stronger India. | MoSPI",
   description:
-    "AI intelligence layer for PAIMANA/OCMS project monitoring data. SIH 2026 Executive Prototype.",
+    "PRISM uses AI to analyse infrastructure projects from the PAIMANA dataset, predict risks, and enable data-driven decisions for faster, more successful outcomes.",
 };
 
 export default function RootLayout({
@@ -27,14 +27,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body>
-        <div className="app-container">
-          <Sidebar />
-          <div className="main-content">
-            <Topbar />
-            <main className="page-body">{children}</main>
-          </div>
-        </div>
+        <AppLayoutWrapper>{children}</AppLayoutWrapper>
       </body>
     </html>
   );
 }
+

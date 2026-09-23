@@ -18,7 +18,7 @@ export function Sidebar() {
   const navItems: NavItem[] = [
     {
       label: "Dashboard",
-      href: "/",
+      href: "/dashboard",
       isAvailable: true,
       icon: (
         <svg className={styles.navIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -121,9 +121,7 @@ export function Sidebar() {
       <ul className={styles.navList}>
         {navItems.map((item) => {
           const isActive =
-            item.href === "/"
-              ? pathname === "/"
-              : item.href !== "#" && pathname.startsWith(item.href);
+            item.href !== "#" && (pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href)));
 
           if (!item.isAvailable) {
             return (
@@ -157,12 +155,12 @@ export function Sidebar() {
       </ul>
 
       <div className={styles.sidebarFooter}>
-        <div className={styles.paimanaLink}>
-          <span>Built with PAIMANA Data</span>
+        <Link href="/" className={styles.paimanaLink} style={{ textDecoration: "none" }} title="Return to Public Portal">
+          <span>← Public Landing Page</span>
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M7 17l9.2-9.2M17 17V7H7" />
           </svg>
-        </div>
+        </Link>
         <p className={styles.tagline}>
           A More Accountable<br />
           A More Developed India

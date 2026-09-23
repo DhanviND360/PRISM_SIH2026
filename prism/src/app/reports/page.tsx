@@ -24,7 +24,7 @@ export default async function ReportsPage() {
       {/* ── Breadcrumb & Header ────────────────────────────────────── */}
       <div className="no-print" style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.8rem", color: "var(--text-muted)" }}>
-          <Link href="/" style={{ color: "var(--brand-blue)" }}>Command Center</Link>
+          <Link href="/dashboard" style={{ color: "var(--brand-blue)" }}>Command Center</Link>
           <span>/</span>
           <span style={{ color: "var(--text-dark)", fontWeight: 600 }}>Reports</span>
         </div>

@@ -62,8 +62,8 @@ export default function LandingPage() {
 
         {/* Access PRISM CTA Button */}
         <div>
-          <Link href="/dashboard" className={styles.accessBtn} id="nav-access-prism">
-            <span>Access PRISM</span>
+          <Link href="/iprism" className={styles.accessBtn} id="nav-access-prism">
+            <span>Access iPRISM</span>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
               <path d="M5 12h14M12 5l7 7-7 7" />
             </svg>
@@ -93,18 +93,18 @@ export default function LandingPage() {
             </p>
 
             <div className={styles.heroBtnRow}>
-              <Link href="/dashboard" className={styles.primaryCtaBtn} id="hero-explore-dashboard">
-                <span>Explore Dashboard</span>
+              <Link href="/iprism" className={styles.primaryCtaBtn} id="hero-explore-dashboard">
+                <span>Launch iPRISM AI</span>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
               </Link>
 
-              <Link href="/dashboard" className={styles.secondaryCtaBtn}>
+              <Link href="/iprism" className={styles.secondaryCtaBtn}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                   <polygon points="5 3 19 12 5 21 5 3" />
                 </svg>
-                <span>Watch Demo</span>
+                <span>Live ML Demo</span>
               </Link>
             </div>
 
@@ -451,7 +451,7 @@ export default function LandingPage() {
               <div className={styles.featuresPill}>KEY FEATURES</div>
               <h2 className={styles.featuresTitle}>Smarter Monitoring. Greater Impact.</h2>
             </div>
-            <Link href="/dashboard" className={styles.featuresLink}>
+            <Link href="/iprism" className={styles.featuresLink}>
               Explore all features →
             </Link>
           </div>
@@ -657,15 +657,15 @@ export default function LandingPage() {
             </p>
 
             <div className={styles.bottomBtnRow}>
-              <Link href="/dashboard" className={styles.whiteAccessBtn} id="bottom-access-prism">
-                <span>Access PRISM</span>
+              <Link href="/iprism" className={styles.whiteAccessBtn} id="bottom-access-prism">
+                <span>Access iPRISM</span>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ display: "inline", marginLeft: "4px" }}>
                   <path d="M5 12h14M12 5l7 7-7 7" />
                 </svg>
               </Link>
 
-              <Link href="/dashboard" className={styles.demoBtn}>
-                Request a Demo
+              <Link href="/iprism" className={styles.demoBtn}>
+                Launch iPRISM AI
               </Link>
             </div>
           </div>

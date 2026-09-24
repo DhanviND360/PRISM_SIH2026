@@ -67,7 +67,7 @@ export default async function DashboardPage() {
           <div className={styles.kpiNumber}>{analytics.totalProjects}</div>
           <div className={styles.kpiTitle}>Total Projects</div>
           <div className={styles.kpiSubtext}>
-            <span className={styles.trendNeutral}>Central monitoring sample</span>
+            <span className={styles.trendNeutral}>Central Infrastructure Portfolio</span>
           </div>
         </div>
 
@@ -154,7 +154,7 @@ export default async function DashboardPage() {
         {/* Card 1: Project Risk Distribution */}
         <div className={styles.gridCard}>
           <div className={styles.cardHeader}>
-            <h2 className={styles.cardTitle}>Project Risk Distribution (Sample)</h2>
+            <h2 className={styles.cardTitle}>Project Risk Distribution</h2>
             <Link href="/projects" className={styles.cardActionLink}>
               All Projects →
             </Link>

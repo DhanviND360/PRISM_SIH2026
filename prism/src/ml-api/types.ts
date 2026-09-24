@@ -1,85 +1,138 @@
 /**
  * PRISM ML — Types & Interfaces
  *
- * Clean interface between the ML prediction layer and the rest of PRISM.
- * The deterministic risk engine and ML predictor are kept completely separate
- * — they return different result types and the UI clearly labels each.
+ * Clean interface for all PRISM predictive models and technical dimensions:
+ *   - Cost Overrun Predictor (Binary Likelihood + ₹ Cr Magnitude)
+ *   - Time Overrun Predictor (Delay Likelihood + Slippage in Months)
+ *   - AI/ML vs. Conventional Statistical Benchmarking (Technical Dimension b)
+ *   - Common Upload Form (CUF) Attribution & Gap Analysis (Technical Dimension c)
  */
 
 export type MLTargetVariable = "COST_OVERRUN" | "SCHEDULE_DELAY";
 
 export interface FeatureVector {
-  /** Log-scaled original sanctioned cost. Reduces magnitude skew. */
+  /** Log-scaled original sanctioned cost */
   logOriginalCostCr: number;
-  /** Physical progress percentage (0–1 normalized). */
+  /** Physical progress percentage (0–1 normalized) */
   progressNorm: number;
-  /** Months remaining to target date (negative = overdue). */
+  /** Months remaining to target date (negative = overdue) */
   monthsToTarget: number;
-  /** Whether cost has already been revised upward. Binary. */
-  hasAnyRevision: number;
+  /** Implied progress velocity: progress / elapsed time proxy */
+  impliedVelocity: number;
+  /** Sector historical risk weight */
+  sectorRiskWeight: number;
 }
 
-/** A named feature with its importance weight and direction. */
+/** A named feature with its importance weight and direction */
 export interface FeatureImportance {
   featureName: string;
-  /** Human-readable label. */
   label: string;
-  /** Model coefficient / weight. Positive = increases risk. */
   weight: number;
-  /** Absolute importance (|weight|). */
   importance: number;
-  /** Direction: "INCREASES_RISK" | "DECREASES_RISK" */
   direction: "INCREASES_RISK" | "DECREASES_RISK";
-  /** The actual value of this feature for the current project. */
   projectValue: number;
-  /** The contribution of this feature to the prediction (weight × value). */
   contribution: number;
 }
 
-/** Evaluation metrics actually computed from training/validation. */
+/** Evaluation metrics computed from cross-validation */
 export interface ModelEvaluation {
-  /** Leave-one-out cross-validation accuracy, or null if not computable. */
   looAccuracy: number | null;
-  /** Total training samples used. */
+  precision: number | null;
+  recall: number | null;
+  f1Score: number | null;
+  mae: number | null;
+  rmse: number | null;
   trainingSamples: number;
-  /** Positive class count in training data. */
   positiveCount: number;
-  /** Negative class count in training data. */
   negativeCount: number;
-  /** Majority-class baseline accuracy (what you'd get by always predicting the majority). */
   baselineAccuracy: number;
-  /** Whether the sample is sufficient for reliable ML evaluation. */
   isSufficientSample: boolean;
-  /** Human-readable assessment of sample adequacy. */
   sampleAdequacyNote: string;
-  /** Number of LOO folds that were correct. */
-  looCorrectCount: number | null;
 }
 
-/** The complete ML prediction result for a single project. */
-export interface MLPrediction {
-  /** Which target variable was predicted. */
-  target: MLTargetVariable;
-  /** Human-readable target description. */
+/** The complete Cost Overrun prediction result */
+export interface MLCostPrediction {
+  target: "COST_OVERRUN";
   targetDescription: string;
-  /** Binary prediction: true = positive class (overrun / delay). */
   prediction: boolean;
-  /** Human-readable prediction label. */
   predictionLabel: string;
-  /** Model-output probability (0–1). Only meaningful if model is calibrated. */
   probability: number;
-  /** Confidence qualifier based on probability distance from 0.5. */
   confidenceLabel: "HIGH" | "MODERATE" | "LOW" | "UNCERTAIN";
-  /** Ranked feature importances for this prediction. */
+  /** Continuous predicted cost escalation in ₹ Crore */
+  predictedEscalationCr: number;
+  /** Predicted overrun percentage */
+  predictedOverrunPct: number;
   topFeatures: FeatureImportance[];
-  /** Evaluation metrics from training. */
   evaluation: ModelEvaluation;
-  /** Model identifier for reproducibility. */
   modelId: string;
-  /** Timestamp of prediction. */
   predictedAt: string;
-  /** Whether the ML pipeline was able to produce a meaningful prediction. */
   isViable: boolean;
-  /** If not viable, the reason. */
   nonViableReason: string | null;
+}
+
+/** The complete Schedule Delay prediction result */
+export interface MLSchedulePrediction {
+  target: "SCHEDULE_DELAY";
+  targetDescription: string;
+  prediction: boolean;
+  predictionLabel: string;
+  probability: number;
+  confidenceLabel: "HIGH" | "MODERATE" | "LOW" | "UNCERTAIN";
+  /** Continuous predicted delay in months beyond revised date */
+  predictedDelayMonths: number;
+  /** Projected revised date based on ML velocity extrapolation */
+  projectedCompletionDate: string;
+  velocityPaceStatus: "ON_TRACK" | "AT_RISK" | "CRITICAL_LAG";
+  topFeatures: FeatureImportance[];
+  evaluation: ModelEvaluation;
+  modelId: string;
+  predictedAt: string;
+  isViable: boolean;
+  nonViableReason: string | null;
+}
+
+// Backward compatibility alias for single prediction
+export type MLPrediction = MLCostPrediction;
+
+// ── Technical Dimension (b): AI/ML vs Conventional Statistical Baseline ─
+
+export interface MetricComparisonRow {
+  metricName: string;
+  conventionalStatistical: string | number;
+  machineLearningModel: string | number;
+  gainDescription: string;
+  mlOutperforms: boolean;
+}
+
+export interface MLBenchmarkReport {
+  generatedAt: string;
+  datasetSize: number;
+  comparisonTable: MetricComparisonRow[];
+  executiveSummary: string;
+  methodologyNote: string;
+  statisticalModelsEvaluated: string[];
+  mlModelsEvaluated: string[];
+}
+
+// ── Technical Dimension (c): CUF Field Attribution Analysis ─────────────
+
+export interface CUFFeatureAttributionItem {
+  fieldName: string;
+  category: "CURRENT_CUF" | "DESIRABLE_LATENT";
+  varianceExplainedPct: number;
+  description: string;
+  dataStatus: "CAPTURED" | "PARTIALLY_CAPTURED" | "RECOMMENDED_FOR_CUF_V2";
+}
+
+export interface CUFAttributionReport {
+  generatedAt: string;
+  totalVarianceExplainedByCurrentCUF: number; // e.g. 61.4%
+  totalVarianceUnexplainedOrLatent: number;  // e.g. 38.6%
+  attributions: CUFFeatureAttributionItem[];
+  keyMissingVariables: {
+    field: string;
+    impactRationale: string;
+    suggestedIngestionMechanism: string;
+  }[];
+  policyRecommendationsForMoSPI: string[];
 }

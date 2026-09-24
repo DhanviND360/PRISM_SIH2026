@@ -1,41 +1,87 @@
 /**
- * Quick smoke test for the ML pipeline.
- * Verifies: training works, LOO-CV runs, prediction is returned.
+ * Automated smoke test for PRISM AI/ML Predictive Models Suite
+ *
+ * Verifies:
+ *   1. Cost Overrun Model (Classification + Magnitude Regression in ₹ Cr)
+ *   2. Time Overrun Model (Classification + Delay Slippage in Months)
+ *   3. AI/ML vs. Conventional Statistical EVM Benchmark (Technical Dimension b)
+ *   4. CUF Field Attribution Analysis (Technical Dimension c)
  */
-import { getTrainingData, extractFeatures, featureVectorToArray } from "../ml-api/preprocessing";
-import { trainLogisticRegression, leaveOneOutCV, predictProbability } from "../ml-api/model";
 
-const data = getTrainingData();
-console.log(`\n=== PRISM ML Pipeline Test ===\n`);
-console.log(`Training records: ${data.length}`);
-console.log(`Cost overrun (positive): ${data.filter(d => d.hasCostOverrun).length}`);
-console.log(`No overrun (negative): ${data.filter(d => !d.hasCostOverrun).length}`);
+import { getDataProvider } from "../lib/data-provider";
+import {
+  predictCostOverrun,
+  predictScheduleDelay,
+  getMLBenchmarkReport,
+  getCUFAttributionReport,
+} from "../ml-api";
 
-const X = data.map(d => featureVectorToArray(extractFeatures(d)));
-const y = data.map(d => d.hasCostOverrun ? 1 : 0);
+async function runSmokeTest() {
+  console.log("==========================================================");
+  console.log("           PRISM AI/ML PREDICTIVE SUITE SMOKE TEST        ");
+  console.log("==========================================================\n");
 
-console.log(`\nFeature matrix shape: ${X.length} × ${X[0].length}`);
-console.log(`Sample features (row 0): ${X[0].map(v => v.toFixed(3)).join(", ")}`);
+  const provider = getDataProvider();
+  const projects = await provider.getAllProjects();
 
-const model = trainLogisticRegression(X, y, { learningRate: 0.05, epochs: 1000 });
-console.log(`\nModel trained:`);
-console.log(`  Weights: ${model.weights.map(w => w.toFixed(4)).join(", ")}`);
-console.log(`  Bias: ${model.bias.toFixed(4)}`);
-console.log(`  Epochs: ${model.epochs}`);
-console.log(`  Final loss: ${model.finalLoss.toFixed(6)}`);
+  console.log(`Loaded ${projects.length} sample projects from DataProvider.\n`);
 
-const loocv = leaveOneOutCV(X, y, { learningRate: 0.05, epochs: 1000 });
-console.log(`\nLeave-One-Out CV:`);
-console.log(`  Accuracy: ${(loocv.accuracy * 100).toFixed(1)}% (${loocv.correctCount}/${loocv.total})`);
-console.log(`  Baseline (majority): ${(Math.max(y.filter(v=>v===1).length, y.filter(v=>v===0).length) / y.length * 100).toFixed(1)}%`);
+  // ── 1. Cost Overrun Prediction Test ────────────────────────────────────
+  console.log("── 1. Cost Overrun Model (Outcome a) ──");
+  for (const p of projects.slice(0, 4)) {
+    const costPred = predictCostOverrun(p);
+    console.log(
+      `[${costPred.prediction ? "OVERRUN LIKELY " : "ON BUDGET      "}] ` +
+      `${p.name.substring(0, 38).padEnd(40)} | ` +
+      `Prob: ${(costPred.probability * 100).toFixed(1)}% | ` +
+      `Magnitude: +₹ ${costPred.predictedEscalationCr.toLocaleString("en-IN")} Cr (+${costPred.predictedOverrunPct}%) | ` +
+      `Conf: ${costPred.confidenceLabel}`
+    );
+  }
+  console.log("");
 
-console.log(`\nPredictions for all projects:`);
-for (let i = 0; i < data.length; i++) {
-  const prob = predictProbability(model, X[i]);
-  const pred = prob >= 0.5 ? "OVERRUN" : "ON_BUDGET";
-  const actual = data[i].hasCostOverrun ? "OVERRUN" : "ON_BUDGET";
-  const match = pred === actual ? "✓" : "✗";
-  console.log(`  ${match} ${data[i].projectName.substring(0, 45).padEnd(47)} | P(overrun)=${prob.toFixed(3)} | Pred=${pred.padEnd(10)} | Actual=${actual}`);
+  // ── 2. Time Overrun Prediction Test ────────────────────────────────────
+  console.log("── 2. Time Overrun Model (Outcome b) ──");
+  for (const p of projects.slice(0, 4)) {
+    const schedPred = predictScheduleDelay(p);
+    console.log(
+      `[${schedPred.prediction ? "DELAY LIKELY   " : "ON TRACK       "}] ` +
+      `${p.name.substring(0, 38).padEnd(40)} | ` +
+      `Prob: ${(schedPred.probability * 100).toFixed(1)}% | ` +
+      `Slippage: +${schedPred.predictedDelayMonths} mos | ` +
+      `Est Date: ${schedPred.projectedCompletionDate} | ` +
+      `Pace: ${schedPred.velocityPaceStatus}`
+    );
+  }
+  console.log("");
+
+  // ── 3. AI/ML vs Conventional Statistical Benchmark Test ────────────────
+  console.log("── 3. Technical Dimension (b): Statistical Baseline vs AI/ML ──");
+  const benchmark = getMLBenchmarkReport();
+  console.log(`Evaluated on n = ${benchmark.datasetSize} PAIMANA project records:`);
+  for (const row of benchmark.comparisonTable) {
+    console.log(`  • ${row.metricName}`);
+    console.log(`    - Conventional Statistical (EVM): ${row.conventionalStatistical}`);
+    console.log(`    - PRISM Machine Learning:         ${row.machineLearningModel}`);
+    console.log(`    - Gain Assessment:                ${row.gainDescription}`);
+  }
+  console.log("");
+
+  // ── 4. CUF Field Attribution Test ──────────────────────────────────────
+  console.log("── 4. Technical Dimension (c): CUF Field Attribution ──");
+  const cufReport = getCUFAttributionReport();
+  console.log(`Current CUF Variance Explained: ${cufReport.totalVarianceExplainedByCurrentCUF}%`);
+  console.log(`Uncaptured Latent Variance:     ${cufReport.totalVarianceUnexplainedOrLatent}%`);
+  console.log("Key Missing Variables Recommended for MoSPI CUF v2.0:");
+  for (const v of cufReport.keyMissingVariables) {
+    console.log(`  * ${v.field}`);
+  }
+  console.log("\n==========================================================");
+  console.log("                ALL ML TESTS COMPLETED SUCCESSFULLY        ");
+  console.log("==========================================================");
 }
 
-console.log(`\n=== Test Complete ===`);
+runSmokeTest().catch((err) => {
+  console.error("Test failed with error:", err);
+  process.exit(1);
+});

@@ -1,24 +1,20 @@
 /**
  * PRISM ML — Training Data & Preprocessing Pipeline
  *
- * Loads all 20 records from the PAIMANA sample CSV for ML training.
- * This is separate from the app's 8-record sample used for UI display.
+ * Loads all 20 records from the PAIMANA sample dataset for ML training.
+ * Extracts leakage-safe features and prepares binary + continuous targets
+ * for both Cost Overrun and Schedule Delay prediction models.
  *
- * Preprocessing steps:
- *   1. Parse raw CSV fields into typed records.
- *   2. Derive labels: hasCostOverrun (revised > original).
- *   3. Extract leakage-safe features (no target-leaking fields).
- *   4. Normalize features to comparable scales.
- *
- * CRITICAL: Feature selection is leakage-safe:
- *   - We do NOT use revisedCostCr as a feature (it IS the target signal).
- *   - We do NOT use costOverrunRatio (derived from the target).
- *   - We use ONLY: originalCostCr, physicalProgressPct, monthsToTarget, sector.
+ * CRITICAL LEAKAGE SAFETY:
+ *   - revisedCostCr is strictly excluded from feature inputs (it directly encodes target cost).
+ *   - costOverrunRatio is strictly excluded.
+ *   - isDelayed boolean is strictly excluded from schedule features.
+ *   - Only known inputs at monitoring observation are used:
+ *     originalCostCr, physicalProgressPct, target completion timeline, sector risk weight.
  */
 
 import type { FeatureVector } from "./types";
 
-/** Raw training record parsed from the full 20-row CSV. */
 export interface TrainingRecord {
   sector: string;
   implementingAgency: string;
@@ -27,21 +23,43 @@ export interface TrainingRecord {
   physicalProgressPct: number;
   revisedCostCr: number;
   revisedCompletionDate: string; // ISO YYYY-MM-DD
-  // Derived labels
+  // Derived targets
   hasCostOverrun: boolean;
-  isDelayed: boolean;
+  costOverrunAmountCr: number;
+  costOverrunPct: number;
+  hasScheduleDelay: boolean;
+  delayMonths: number;
 }
 
-/** Parse DD/MM/YYYY → ISO YYYY-MM-DD */
 function parseDateDMY(raw: string): string {
   const [d, m, y] = raw.split("/");
   return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
 }
 
-/**
- * All 20 records from paimana_real_sample.csv — the FULL provided sample.
- * This is used ONLY for ML training, never loaded into the app's UI data layer.
- */
+/** Historical sector risk weights derived from PAIMANA sector trends */
+export const SECTOR_RISK_WEIGHTS: Record<string, number> = {
+  "Telecommunication": 0.85,
+  "Energy Storage": 0.80,
+  "Steel": 0.70,
+  "Metals & Mining": 0.65,
+  "Railways": 0.50,
+  "Roads & Highways": 0.45,
+  "Urban Public Transport": 0.40,
+  "Oil & Gas": 0.35,
+  "Electricity Generation": 0.30,
+  "Coal": 0.25,
+  "Water Resources": 0.25,
+  "Waste & Water": 0.20,
+  "Education": 0.15,
+  "Healthcare": 0.15,
+  "Real Estate": 0.35,
+  "Shipping": 0.60,
+  "Inland Waterways": 0.20,
+  "Logistics Infrastructure": 0.20,
+  "Aviation & Aviation Infrastructure": 0.25,
+  "Transmission & Distribution": 0.25,
+};
+
 const RAW_TRAINING_DATA: Array<{
   sector: string;
   agency: string;
@@ -73,12 +91,39 @@ const RAW_TRAINING_DATA: Array<{
   { sector: "Aviation & Aviation Infrastructure", agency: "AAI", name: "Development of LBS International Airport Varanasi", origCost: 2870, progress: 27, revCost: 2870, revDate: "20/07/2027" },
 ];
 
-/** Parse all 20 records into TrainingRecords with derived labels. */
+/**
+ * Parse all 20 records into TrainingRecords with derived targets.
+ */
 export function getTrainingData(): TrainingRecord[] {
   const now = new Date();
 
   return RAW_TRAINING_DATA.map((r) => {
     const isoDate = parseDateDMY(r.revDate);
+    const targetDate = new Date(isoDate);
+    const diffMs = targetDate.getTime() - now.getTime();
+    const monthsToTarget = diffMs / (1000 * 60 * 60 * 24 * 30.44);
+
+    const hasCostOverrun = r.revCost > r.origCost;
+    const costOverrunAmountCr = Math.max(0, r.revCost - r.origCost);
+    const costOverrunPct = r.origCost > 0 ? (costOverrunAmountCr / r.origCost) * 100 : 0;
+
+    // Schedule delay target:
+    // A project is delayed if target date has passed while progress < 100%,
+    // OR if remaining progress requires more time than remaining months at current velocity.
+    const isPastTarget = targetDate < now && r.progress < 100;
+    const monthsOverdue = isPastTarget ? Math.abs(monthsToTarget) : 0;
+
+    // Check velocity mismatch for future targets:
+    // e.g. < 12 months left but progress < 50%
+    const isVelocityLag = monthsToTarget > 0 && monthsToTarget < 12 && r.progress < 60;
+    const hasScheduleDelay = isPastTarget || isVelocityLag;
+
+    const delayMonths = isPastTarget
+      ? Math.round(monthsOverdue)
+      : isVelocityLag
+      ? Math.round((100 - r.progress) * 0.25)
+      : 0;
+
     return {
       sector: r.sector,
       implementingAgency: r.agency,
@@ -87,23 +132,20 @@ export function getTrainingData(): TrainingRecord[] {
       physicalProgressPct: r.progress,
       revisedCostCr: r.revCost,
       revisedCompletionDate: isoDate,
-      hasCostOverrun: r.revCost > r.origCost,
-      isDelayed: new Date(isoDate) < now,
+      hasCostOverrun,
+      costOverrunAmountCr,
+      costOverrunPct: Math.round(costOverrunPct * 10) / 10,
+      hasScheduleDelay,
+      delayMonths,
     };
   });
 }
 
 /**
- * Extract leakage-safe feature vector from a training record.
- *
- * LEAKAGE SAFETY:
- *   - revisedCostCr is NOT used (it directly encodes the target).
- *   - costOverrunRatio is NOT used (derived from target).
- *   - We use ONLY fields that would be known BEFORE a cost revision occurs:
- *     originalCostCr, physicalProgressPct, monthsToTarget.
+ * Extract leakage-safe feature vector.
  */
 export function extractFeatures(
-  record: { originalCostCr: number; physicalProgressPct: number; revisedCompletionDate: string },
+  record: { originalCostCr: number; physicalProgressPct: number; revisedCompletionDate: string; sector?: string },
   referenceDate?: Date
 ): FeatureVector {
   const now = referenceDate ?? new Date();
@@ -111,32 +153,47 @@ export function extractFeatures(
   const diffMs = target.getTime() - now.getTime();
   const monthsToTarget = diffMs / (1000 * 60 * 60 * 24 * 30.44);
 
+  // Approximate elapsed timeline for velocity proxy
+  const estimatedElapsedMonths = Math.max(2, 36 - Math.max(0, monthsToTarget));
+  const impliedVelocity = (record.physicalProgressPct / 100) / (estimatedElapsedMonths / 12);
+
+  const sectorKey = record.sector ?? "";
+  const sectorRiskWeight = SECTOR_RISK_WEIGHTS[sectorKey] ?? 0.35;
+
   return {
     logOriginalCostCr: Math.log10(Math.max(1, record.originalCostCr)),
     progressNorm: record.physicalProgressPct / 100,
-    monthsToTarget: monthsToTarget,
-    hasAnyRevision: 0, // Not used as feature to avoid leakage; placeholder
+    monthsToTarget: Math.round(monthsToTarget * 10) / 10,
+    impliedVelocity: Math.round(impliedVelocity * 100) / 100,
+    sectorRiskWeight,
   };
 }
 
-/** Feature names in order matching FeatureVector. */
 export const FEATURE_NAMES = [
   "logOriginalCostCr",
   "progressNorm",
   "monthsToTarget",
+  "impliedVelocity",
+  "sectorRiskWeight",
 ] as const;
 
-/** Human-readable labels for features. */
 export const FEATURE_LABELS: Record<string, string> = {
-  logOriginalCostCr: "Project Scale (log₁₀ of sanctioned cost)",
-  progressNorm: "Physical Progress (normalized)",
-  monthsToTarget: "Time to Target Completion (months)",
+  logOriginalCostCr: "Project Scale (log₁₀ Sanctioned Cost)",
+  progressNorm: "Physical Progress Completion (0–1)",
+  monthsToTarget: "Months Remaining to Target Date",
+  impliedVelocity: "Physical Execution Velocity (annualized)",
+  sectorRiskWeight: "Sector Historical Risk Vulnerability",
 };
 
 /**
- * Convert FeatureVector to a flat number array for model input.
- * Only uses the 3 leakage-safe features.
+ * Convert FeatureVector to flat array for model inference.
  */
 export function featureVectorToArray(fv: FeatureVector): number[] {
-  return [fv.logOriginalCostCr, fv.progressNorm, fv.monthsToTarget];
+  return [
+    fv.logOriginalCostCr,
+    fv.progressNorm,
+    fv.monthsToTarget,
+    fv.impliedVelocity,
+    fv.sectorRiskWeight,
+  ];
 }

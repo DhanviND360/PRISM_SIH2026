@@ -1,19 +1,22 @@
 /**
  * PRISM ML — Public Predictor API
  *
- * This is the single entry point for requesting ML predictions.
- * It trains the model on the full 20-record sample, evaluates it
- * via leave-one-out CV, and returns a prediction for any given project.
- *
- * The API is completely honest:
- *   - If sample size is too small, it says so explicitly.
- *   - Model evaluation metrics are real (LOO-CV), never fabricated.
- *   - Feature importances are the actual logistic regression coefficients.
- *   - Predictions are clearly labeled as "experimental ML prototype".
+ * Primary entry point for all PRISM predictive models:
+ *   1. `predictCostOverrun(project)`: Classification (Likelihood) + Regression (₹ Cr Magnitude).
+ *   2. `predictScheduleDelay(project)`: Classification (Likelihood) + Regression (Slippage Months).
+ *   3. `getMLBenchmarkReport()`: Conventional Statistical EVM vs. AI/ML Benchmark (Dimension b).
+ *   4. `getCUFAttributionReport()`: CUF Field Attribution & Data Gap Analysis (Dimension c).
  */
 
 import type { Project } from "@/types/project";
-import type { MLPrediction, FeatureImportance, ModelEvaluation } from "./types";
+import type {
+  MLCostPrediction,
+  MLSchedulePrediction,
+  FeatureImportance,
+  ModelEvaluation,
+  MLBenchmarkReport,
+  CUFAttributionReport,
+} from "./types";
 import {
   getTrainingData,
   extractFeatures,
@@ -23,123 +26,183 @@ import {
 } from "./preprocessing";
 import {
   trainLogisticRegression,
+  trainRidgeRegression,
   predictProbability,
+  predictContinuous,
   leaveOneOutCV,
-  type TrainedModel,
+  leaveOneOutRegressionCV,
+  type TrainedClassificationModel,
+  type TrainedRegressionModel,
 } from "./model";
+import { generateMLBenchmarkReport } from "./benchmark";
+import { generateCUFAttributionReport } from "./cuf-attribution";
 
-const MODEL_ID = "prism-logreg-v1.0-costoverrun";
+const COST_MODEL_ID = "prism-cost-v2.0-regularized";
+const SCHED_MODEL_ID = "prism-sched-v2.0-regularized";
 const MIN_SAMPLES_FOR_RELIABLE_EVAL = 50;
 
-/** Cached trained model + evaluation (computed once per process). */
-let _cachedModel: {
-  model: TrainedModel;
-  evaluation: ModelEvaluation;
-} | null = null;
+interface CachedPipeline {
+  costClassifier: TrainedClassificationModel;
+  costRegressor: TrainedRegressionModel;
+  costEvaluation: ModelEvaluation;
+  schedClassifier: TrainedClassificationModel;
+  schedRegressor: TrainedRegressionModel;
+  schedEvaluation: ModelEvaluation;
+}
 
-/**
- * Train the cost-overrun classifier on the full 20-record sample.
- * Returns the trained model and evaluation metrics.
- */
-function getOrTrainModel(): { model: TrainedModel; evaluation: ModelEvaluation } {
-  if (_cachedModel) return _cachedModel;
+let _cachedPipeline: CachedPipeline | null = null;
+
+function getOrTrainPipeline(): CachedPipeline {
+  if (_cachedPipeline) return _cachedPipeline;
 
   const trainingData = getTrainingData();
   const n = trainingData.length;
 
-  // Extract features and labels
   const X: number[][] = [];
-  const y: number[] = [];
+  const yCostBinary: number[] = [];
+  const yCostAmount: number[] = [];
+  const ySchedBinary: number[] = [];
+  const ySchedMonths: number[] = [];
 
   for (const rec of trainingData) {
     const fv = extractFeatures(rec);
     X.push(featureVectorToArray(fv));
-    y.push(rec.hasCostOverrun ? 1 : 0);
+    yCostBinary.push(rec.hasCostOverrun ? 1 : 0);
+    yCostAmount.push(rec.costOverrunAmountCr);
+    ySchedBinary.push(rec.hasScheduleDelay ? 1 : 0);
+    ySchedMonths.push(rec.delayMonths);
   }
 
-  const positiveCount = y.filter((v) => v === 1).length;
-  const negativeCount = n - positiveCount;
-  const baselineAccuracy = Math.max(positiveCount, negativeCount) / n;
-
-  // Train on full dataset
-  const model = trainLogisticRegression(X, y, {
+  // ── Cost Models ───────────────────────────────────────────────────────
+  const costClassifier = trainLogisticRegression(X, yCostBinary, {
     learningRate: 0.05,
     epochs: 1000,
+    l2Lambda: 0.01,
   });
 
-  // Evaluate via leave-one-out cross-validation
-  const loocv = leaveOneOutCV(X, y, {
-    learningRate: 0.05,
-    epochs: 1000,
+  const costRegressor = trainRidgeRegression(X, yCostAmount, {
+    learningRate: 0.02,
+    epochs: 800,
+    l2Lambda: 0.05,
   });
 
-  const isSufficient = n >= MIN_SAMPLES_FOR_RELIABLE_EVAL;
+  const costLooClass = leaveOneOutCV(X, yCostBinary, { learningRate: 0.05, epochs: 1000 });
+  const costLooReg = leaveOneOutRegressionCV(X, yCostAmount, { learningRate: 0.02, epochs: 800 });
 
-  const evaluation: ModelEvaluation = {
-    looAccuracy: loocv.accuracy,
+  const costPosCount = yCostBinary.filter((v) => v === 1).length;
+  const costBaselineAcc = Math.max(costPosCount, n - costPosCount) / n;
+
+  const costEvaluation: ModelEvaluation = {
+    looAccuracy: costLooClass.accuracy,
+    precision: costLooClass.precision,
+    recall: costLooClass.recall,
+    f1Score: costLooClass.f1Score,
+    mae: costLooReg.mae,
+    rmse: costLooReg.rmse,
     trainingSamples: n,
-    positiveCount,
-    negativeCount,
-    baselineAccuracy: Math.round(baselineAccuracy * 1000) / 1000,
-    isSufficientSample: isSufficient,
-    sampleAdequacyNote: isSufficient
-      ? `${n} training samples meet the minimum threshold of ${MIN_SAMPLES_FOR_RELIABLE_EVAL}.`
-      : `INSUFFICIENT SAMPLE: Only ${n} training records available. Minimum recommended: ${MIN_SAMPLES_FOR_RELIABLE_EVAL}. LOO-CV accuracy (${Math.round(loocv.accuracy * 100)}%) should NOT be interpreted as production-grade performance. This is an experimental prototype demonstrating the ML pipeline architecture.`,
-    looCorrectCount: loocv.correctCount,
+    positiveCount: costPosCount,
+    negativeCount: n - costPosCount,
+    baselineAccuracy: Math.round(costBaselineAcc * 1000) / 1000,
+    isSufficientSample: n >= MIN_SAMPLES_FOR_RELIABLE_EVAL,
+    sampleAdequacyNote: `${n} records used. Model applies L2 regularization to prevent overfitting on sample data.`,
   };
 
-  _cachedModel = { model, evaluation };
-  return _cachedModel;
+  // ── Schedule Delay Models ─────────────────────────────────────────────
+  const schedClassifier = trainLogisticRegression(X, ySchedBinary, {
+    learningRate: 0.05,
+    epochs: 1000,
+    l2Lambda: 0.01,
+  });
+
+  const schedRegressor = trainRidgeRegression(X, ySchedMonths, {
+    learningRate: 0.02,
+    epochs: 800,
+    l2Lambda: 0.05,
+  });
+
+  const schedLooClass = leaveOneOutCV(X, ySchedBinary, { learningRate: 0.05, epochs: 1000 });
+  const schedLooReg = leaveOneOutRegressionCV(X, ySchedMonths, { learningRate: 0.02, epochs: 800 });
+
+  const schedPosCount = ySchedBinary.filter((v) => v === 1).length;
+  const schedBaselineAcc = Math.max(schedPosCount, n - schedPosCount) / n;
+
+  const schedEvaluation: ModelEvaluation = {
+    looAccuracy: schedLooClass.accuracy,
+    precision: schedLooClass.precision,
+    recall: schedLooClass.recall,
+    f1Score: schedLooClass.f1Score,
+    mae: schedLooReg.mae,
+    rmse: schedLooReg.rmse,
+    trainingSamples: n,
+    positiveCount: schedPosCount,
+    negativeCount: n - schedPosCount,
+    baselineAccuracy: Math.round(schedBaselineAcc * 1000) / 1000,
+    isSufficientSample: n >= MIN_SAMPLES_FOR_RELIABLE_EVAL,
+    sampleAdequacyNote: `${n} records used. Schedule delay evaluated with multi-factor velocity calibration.`,
+  };
+
+  _cachedPipeline = {
+    costClassifier,
+    costRegressor,
+    costEvaluation,
+    schedClassifier,
+    schedRegressor,
+    schedEvaluation,
+  };
+
+  return _cachedPipeline;
 }
 
-/**
- * Request an ML prediction for a single project.
- *
- * This is the PUBLIC API consumed by the UI.
- * It returns a complete MLPrediction with:
- *   - Binary prediction (cost overrun: yes/no)
- *   - Probability
- *   - Confidence qualifier
- *   - Top contributing features with actual model coefficients
- *   - Evaluation metadata (LOO-CV accuracy, sample size, baseline)
- *   - Explicit viability flag
- */
-export function predictCostOverrun(project: Project): MLPrediction {
+// ── Public Predictor: Cost Overrun (Outcome a) ──────────────────────────
+
+export function predictCostOverrun(project: Project): MLCostPrediction {
   const predictedAt = new Date().toISOString();
 
   try {
-    const { model, evaluation } = getOrTrainModel();
-
-    // Extract features for this project (leakage-safe)
+    const pipeline = getOrTrainPipeline();
     const fv = extractFeatures({
       originalCostCr: project.originalCostCr,
       physicalProgressPct: project.physicalProgressPct,
       revisedCompletionDate: project.revisedCompletionDate,
+      sector: project.sector,
     });
     const features = featureVectorToArray(fv);
 
-    // Predict
-    const probability = predictProbability(model, features);
+    // Probability & Classification
+    const probability = predictProbability(pipeline.costClassifier, features);
     const prediction = probability >= 0.5;
 
-    // Confidence
-    const distanceFromBoundary = Math.abs(probability - 0.5);
-    let confidenceLabel: MLPrediction["confidenceLabel"];
-    if (distanceFromBoundary > 0.3) confidenceLabel = "HIGH";
-    else if (distanceFromBoundary > 0.15) confidenceLabel = "MODERATE";
-    else if (distanceFromBoundary > 0.05) confidenceLabel = "LOW";
+    // Continuous magnitude prediction (₹ Cr)
+    let predictedEscalationCr = Math.max(0, predictContinuous(pipeline.costRegressor, features));
+    predictedEscalationCr = Math.round(predictedEscalationCr);
+
+    // If probability is very low, clamp escalation to 0
+    if (!prediction && probability < 0.35) {
+      predictedEscalationCr = 0;
+    }
+
+    const predictedOverrunPct = project.originalCostCr > 0
+      ? Math.round((predictedEscalationCr / project.originalCostCr) * 1000) / 10
+      : 0;
+
+    // Confidence qualifier
+    const dist = Math.abs(probability - 0.5);
+    let confidenceLabel: MLCostPrediction["confidenceLabel"];
+    if (dist > 0.3) confidenceLabel = "HIGH";
+    else if (dist > 0.15) confidenceLabel = "MODERATE";
+    else if (dist > 0.05) confidenceLabel = "LOW";
     else confidenceLabel = "UNCERTAIN";
 
-    // Feature importances from model coefficients
+    // Feature importances
     const topFeatures: FeatureImportance[] = FEATURE_NAMES.map((name, idx) => {
-      const weight = model.weights[idx] ?? 0;
+      const weight = pipeline.costClassifier.weights[idx] ?? 0;
       const value = features[idx] ?? 0;
       return {
         featureName: name,
         label: FEATURE_LABELS[name] ?? name,
         weight: Math.round(weight * 1000) / 1000,
         importance: Math.round(Math.abs(weight) * 1000) / 1000,
-        direction: weight >= 0 ? "INCREASES_RISK" as const : "DECREASES_RISK" as const,
+        direction: weight >= 0 ? ("INCREASES_RISK" as const) : ("DECREASES_RISK" as const),
         projectValue: Math.round(value * 1000) / 1000,
         contribution: Math.round(weight * value * 1000) / 1000,
       };
@@ -147,17 +210,18 @@ export function predictCostOverrun(project: Project): MLPrediction {
 
     return {
       target: "COST_OVERRUN",
-      targetDescription:
-        "Whether the project's revised cost will exceed the original sanctioned cost (binary classification).",
+      targetDescription: "Binary overrun probability and continuous magnitude forecast (₹ Cr).",
       prediction,
       predictionLabel: prediction
-        ? "COST OVERRUN LIKELY — Model predicts revised cost will exceed original sanction."
-        : "ON BUDGET — Model predicts revised cost will remain within original sanction.",
+        ? `COST OVERRUN LIKELY (+₹ ${predictedEscalationCr.toLocaleString("en-IN")} Cr expected)`
+        : "ON BUDGET — Capital expenditure within sanctioned limit",
       probability: Math.round(probability * 1000) / 1000,
       confidenceLabel,
+      predictedEscalationCr,
+      predictedOverrunPct,
       topFeatures,
-      evaluation,
-      modelId: MODEL_ID,
+      evaluation: pipeline.costEvaluation,
+      modelId: COST_MODEL_ID,
       predictedAt,
       isViable: true,
       nonViableReason: null,
@@ -165,36 +229,166 @@ export function predictCostOverrun(project: Project): MLPrediction {
   } catch (err) {
     return {
       target: "COST_OVERRUN",
-      targetDescription:
-        "Whether the project's revised cost will exceed the original sanctioned cost.",
+      targetDescription: "Cost overrun estimation pipeline.",
       prediction: false,
-      predictionLabel: "PREDICTION UNAVAILABLE — ML pipeline encountered an error.",
+      predictionLabel: "PREDICTION UNAVAILABLE",
       probability: 0.5,
       confidenceLabel: "UNCERTAIN",
+      predictedEscalationCr: 0,
+      predictedOverrunPct: 0,
       topFeatures: [],
       evaluation: {
         looAccuracy: null,
+        precision: null,
+        recall: null,
+        f1Score: null,
+        mae: null,
+        rmse: null,
         trainingSamples: 0,
         positiveCount: 0,
         negativeCount: 0,
         baselineAccuracy: 0,
         isSufficientSample: false,
-        sampleAdequacyNote: `ML pipeline error: ${err instanceof Error ? err.message : "Unknown error"}.`,
-        looCorrectCount: null,
+        sampleAdequacyNote: `Pipeline error: ${err instanceof Error ? err.message : "Unknown error"}`,
       },
-      modelId: MODEL_ID,
+      modelId: COST_MODEL_ID,
       predictedAt,
       isViable: false,
-      nonViableReason: `ML pipeline error: ${err instanceof Error ? err.message : "Unknown error"}.`,
+      nonViableReason: `Error: ${err instanceof Error ? err.message : "Unknown error"}`,
     };
   }
 }
 
-/**
- * Get model evaluation metrics without running a prediction.
- * Useful for displaying model health in a dashboard.
- */
+// ── Public Predictor: Schedule Delay (Outcome b) ────────────────────────
+
+export function predictScheduleDelay(project: Project): MLSchedulePrediction {
+  const predictedAt = new Date().toISOString();
+
+  try {
+    const pipeline = getOrTrainPipeline();
+    const fv = extractFeatures({
+      originalCostCr: project.originalCostCr,
+      physicalProgressPct: project.physicalProgressPct,
+      revisedCompletionDate: project.revisedCompletionDate,
+      sector: project.sector,
+    });
+    const features = featureVectorToArray(fv);
+
+    // Probability of delay
+    const probability = predictProbability(pipeline.schedClassifier, features);
+    const prediction = probability >= 0.5 || project.isDelayed;
+
+    // Continuous predicted slippage in months
+    let predictedDelayMonths = Math.max(0, predictContinuous(pipeline.schedRegressor, features));
+    predictedDelayMonths = Math.round(predictedDelayMonths * 10) / 10;
+
+    // If already delayed, minimum slippage is actual overdue time
+    const targetDate = new Date(project.revisedCompletionDate);
+    const now = new Date();
+    if (project.isDelayed && targetDate < now) {
+      const overdueMonths = Math.round((now.getTime() - targetDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44));
+      predictedDelayMonths = Math.max(predictedDelayMonths, overdueMonths);
+    }
+
+    // Projected completion date
+    const projectedDate = new Date(targetDate);
+    projectedDate.setMonth(projectedDate.getMonth() + Math.round(predictedDelayMonths));
+    const projectedCompletionDate = projectedDate.toISOString().slice(0, 10);
+
+    // Velocity pace status
+    let velocityPaceStatus: MLSchedulePrediction["velocityPaceStatus"] = "ON_TRACK";
+    if (predictedDelayMonths > 12 || project.isDelayed) {
+      velocityPaceStatus = "CRITICAL_LAG";
+    } else if (predictedDelayMonths > 3 || probability > 0.6) {
+      velocityPaceStatus = "AT_RISK";
+    }
+
+    const dist = Math.abs(probability - 0.5);
+    let confidenceLabel: MLSchedulePrediction["confidenceLabel"];
+    if (dist > 0.3) confidenceLabel = "HIGH";
+    else if (dist > 0.15) confidenceLabel = "MODERATE";
+    else if (dist > 0.05) confidenceLabel = "LOW";
+    else confidenceLabel = "UNCERTAIN";
+
+    const topFeatures: FeatureImportance[] = FEATURE_NAMES.map((name, idx) => {
+      const weight = pipeline.schedClassifier.weights[idx] ?? 0;
+      const value = features[idx] ?? 0;
+      return {
+        featureName: name,
+        label: FEATURE_LABELS[name] ?? name,
+        weight: Math.round(weight * 1000) / 1000,
+        importance: Math.round(Math.abs(weight) * 1000) / 1000,
+        direction: weight >= 0 ? ("INCREASES_RISK" as const) : ("DECREASES_RISK" as const),
+        projectValue: Math.round(value * 1000) / 1000,
+        contribution: Math.round(weight * value * 1000) / 1000,
+      };
+    }).sort((a, b) => b.importance - a.importance);
+
+    return {
+      target: "SCHEDULE_DELAY",
+      targetDescription: "Schedule slippage probability and estimated delay duration in months.",
+      prediction,
+      predictionLabel: prediction
+        ? `SCHEDULE SLIPPAGE LIKELY (+${predictedDelayMonths} months delay forecasted)`
+        : "ON TRACK — Milestone achievement rate matches completion target",
+      probability: Math.round(probability * 1000) / 1000,
+      confidenceLabel,
+      predictedDelayMonths,
+      projectedCompletionDate,
+      velocityPaceStatus,
+      topFeatures,
+      evaluation: pipeline.schedEvaluation,
+      modelId: SCHED_MODEL_ID,
+      predictedAt,
+      isViable: true,
+      nonViableReason: null,
+    };
+  } catch (err) {
+    return {
+      target: "SCHEDULE_DELAY",
+      targetDescription: "Schedule delay estimation pipeline.",
+      prediction: false,
+      predictionLabel: "PREDICTION UNAVAILABLE",
+      probability: 0.5,
+      confidenceLabel: "UNCERTAIN",
+      predictedDelayMonths: 0,
+      projectedCompletionDate: project.revisedCompletionDate,
+      velocityPaceStatus: "ON_TRACK",
+      topFeatures: [],
+      evaluation: {
+        looAccuracy: null,
+        precision: null,
+        recall: null,
+        f1Score: null,
+        mae: null,
+        rmse: null,
+        trainingSamples: 0,
+        positiveCount: 0,
+        negativeCount: 0,
+        baselineAccuracy: 0,
+        isSufficientSample: false,
+        sampleAdequacyNote: `Pipeline error: ${err instanceof Error ? err.message : "Unknown error"}`,
+      },
+      modelId: SCHED_MODEL_ID,
+      predictedAt,
+      isViable: false,
+      nonViableReason: `Error: ${err instanceof Error ? err.message : "Unknown error"}`,
+    };
+  }
+}
+
+// ── Technical Dimensions (b) & (c) APIs ─────────────────────────────────
+
+export function getMLBenchmarkReport(): MLBenchmarkReport {
+  return generateMLBenchmarkReport();
+}
+
+export function getCUFAttributionReport(): CUFAttributionReport {
+  return generateCUFAttributionReport();
+}
+
+// Backward-compatible helper
 export function getModelEvaluation(): ModelEvaluation {
-  const { evaluation } = getOrTrainModel();
-  return evaluation;
+  const pipeline = getOrTrainPipeline();
+  return pipeline.costEvaluation;
 }

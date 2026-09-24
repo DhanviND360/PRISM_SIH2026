@@ -1,0 +1,769 @@
+/* ── iPRISM Government Analytics Subpage Styles ────────────────────────── */
+
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-bottom: var(--space-5);
+}
+
+/* ── Breadcrumb & Header ─────────────────────────────────────────────── */
+.headerRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.breadcrumbWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.breadcrumbLink {
+  color: var(--brand-blue);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.breadcrumbLink:hover {
+  text-decoration: underline;
+}
+
+.titleBlock {
+  display: flex;
+  flex-direction: column;
+}
+
+.pageTitle {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--text-dark);
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.titlePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background-color: #eff6ff;
+  color: var(--brand-blue);
+  border: 1px solid #bfdbfe;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.pageSubtitle {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  max-width: 820px;
+  line-height: 1.5;
+}
+
+.headerMeta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.verifiedPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background-color: var(--surface-white);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-pill);
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--brand-teal);
+  box-shadow: var(--shadow-card);
+}
+
+.verifiedDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+}
+
+/* ── 5 Primary Metric Cards (matching portal KPI style) ──────────────── */
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--space-2);
+}
+
+.kpiCard {
+  background-color: var(--surface-white);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.kpiCard:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.kpiCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-1);
+}
+
+.kpiIconWrap {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconBlue { background-color: #eff6ff; color: #2563eb; }
+.iconGreen { background-color: #f0fdf4; color: #16a34a; }
+.iconAmber { background-color: #fffbeb; color: #d97706; }
+.iconTeal { background-color: #f0fdfa; color: #0d9488; }
+.iconPurple { background-color: #faf5ff; color: #9333ea; }
+
+.kpiBadge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: var(--radius-pill);
+  background-color: #f1f5f9;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-light);
+}
+
+.kpiNumber {
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: var(--text-dark);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.kpiTitle {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.kpiSubtext {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ── Tab Switcher Strip ──────────────────────────────────────────────── */
+.tabBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--surface-white);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 6px;
+  box-shadow: var(--shadow-card);
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.tabGroup {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tabBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: transparent;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tabBtn:hover {
+  color: var(--text-dark);
+  background-color: var(--surface-subtle);
+}
+
+.tabBtnActive {
+  background-color: var(--brand-blue) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(30, 64, 175, 0.25);
+}
+
+.tabBadge {
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+  background-color: rgba(255, 255, 255, 0.2);
+  color: inherit;
+  font-weight: 700;
+}
+
+.tabBadgeInactive {
+  background-color: #f1f5f9;
+  color: var(--text-muted);
+}
+
+/* ── Tab 1: Project Inspector (Split View) ───────────────────────────── */
+.inspectorLayout {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: var(--space-3);
+  align-items: start;
+}
+
+/* Left Column: Project Selector & Filters */
+.projectListCard {
+  background-color: var(--surface-white);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+  max-height: 820px;
+}
+
+.searchBox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--surface-subtle);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  font-size: 0.82rem;
+}
+
+.searchInput {
+  border: none;
+  background: transparent;
+  outline: none;
+  width: 100%;
+  font-size: 0.82rem;
+  color: var(--text-dark);
+}
+
+.searchInput::placeholder {
+  color: var(--text-muted);
+}
+
+.filterChips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.filterChip {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-light);
+  background-color: var(--surface-white);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.filterChip:hover {
+  border-color: var(--border-dark);
+  color: var(--text-dark);
+}
+
+.filterChipActive {
+  background-color: #0f172a !important;
+  color: #ffffff !important;
+  border-color: #0f172a !important;
+}
+
+.projectsScrollArea {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-right: 4px;
+}
+
+.projectListItem {
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  background-color: var(--surface-white);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+
+.projectListItem:hover {
+  border-color: var(--brand-blue-border);
+  background-color: var(--surface-hover);
+}
+
+.projectListItemActive {
+  border-color: var(--brand-blue) !important;
+  background-color: #f8faff !important;
+  box-shadow: 0 0 0 1px var(--brand-blue);
+}
+
+.projectItemTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.itemSector {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.itemName {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  line-height: 1.3;
+}
+
+.itemMetrics {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+  margin-top: 2px;
+}
+
+/* Right Column: Deep Risk Dossier */
+.dossierCard {
+  background-color: var(--surface-white);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.dossierHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-2);
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: var(--space-2-5);
+}
+
+.dossierTitle {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--text-dark);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.dossierMetaRow {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.metaItem strong {
+  color: var(--text-dark);
+  font-weight: 700;
+}
+
+/* Prediction Gauges Strip */
+.predictionStrip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+}
+
+.predBox {
+  border-radius: var(--radius-md);
+  padding: var(--space-2);
+  border: 1px solid var(--border-light);
+  background-color: var(--canvas-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.predBoxTitle {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.predBoxValue {
+  font-size: 1.6rem;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.predBoxSub {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+/* Explainability Factor Matrix */
+.sectionTitle {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text-dark);
+  letter-spacing: -0.01em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.factorList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.factorRow {
+  display: grid;
+  grid-template-columns: 200px 1fr 60px;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background-color: var(--surface-subtle);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+}
+
+.factorName {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.factorBarTrack {
+  height: 8px;
+  background-color: #e2e8f0;
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.factorBarFill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+  transition: width 0.4s ease;
+}
+
+.factorWeight {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-dark);
+  text-align: right;
+  font-family: var(--font-mono);
+}
+
+/* Plain-English Root Cause Explanation */
+.explanationBox {
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-left: 4px solid var(--brand-blue);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-2-5);
+  font-size: 0.86rem;
+  line-height: 1.6;
+  color: var(--text-body);
+}
+
+/* Mitigation Action Cards */
+.playbookGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.playbookItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+
+.playbookItemNum {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background-color: #16a34a;
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.playbookText {
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: #14532d;
+}
+
+/* ── Tab 2: Empirical Proof & LOOCV Benchmarks ────────────────────────── */
+.proofLayout {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.comparisonRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+.compCard {
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+}
+
+.compCardEVM {
+  background-color: #fff8f8;
+  border: 1px solid #fecaca;
+}
+
+.compCardML {
+  background-color: #f6fcf8;
+  border: 1px solid #bbf7d0;
+}
+
+.compHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.compBadgeFail {
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  background-color: #fee2e2;
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+  text-transform: uppercase;
+}
+
+.compBadgePass {
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
+  background-color: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
+  text-transform: uppercase;
+}
+
+.compTitle {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-dark);
+}
+
+.compList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.compList li {
+  font-size: 0.84rem;
+  line-height: 1.5;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.compBulletFail { color: #dc2626; font-weight: 800; }
+.compBulletPass { color: #16a34a; font-weight: 800; }
+
+/* Benchmark Tables (Government Analytics Styling) */
+.tableCard {
+  background-color: var(--surface-white);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: var(--space-2-5);
+  box-shadow: var(--shadow-card);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1-5);
+}
+
+.tableTitle {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--text-dark);
+}
+
+.tableSub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.govTableWrap {
+  overflow-x: auto;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-light);
+}
+
+.govTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  text-align: left;
+}
+
+.govTable thead tr {
+  background-color: var(--surface-subtle);
+  border-bottom: 2px solid var(--border-light);
+}
+
+.govTable th {
+  padding: 10px 14px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.govTable td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-body);
+}
+
+.govTable tbody tr:hover td {
+  background-color: var(--surface-hover);
+}
+
+.rowBest td {
+  background-color: #f0fdf4 !important;
+  font-weight: 600;
+  color: #14532d !important;
+}
+
+.rowBaseline td {
+  background-color: #fffaf0 !important;
+  color: var(--text-muted);
+}
+
+.bestTag {
+  display: inline-block;
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: var(--radius-pill);
+  background-color: #dcfce7;
+  color: #15803d;
+  border: 1px solid #86efac;
+  margin-left: 6px;
+}
+
+/* Reproducibility Callout */
+.reproCard {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+  color: #f8fafc;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.reproCode {
+  font-family: var(--font-mono);
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  color: #38bdf8;
+  font-size: 0.85rem;
+}
+
+/* ── Responsive Queries ──────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .kpiGrid { grid-template-columns: repeat(3, 1fr); }
+  .inspectorLayout { grid-template-columns: 1fr; }
+  .comparisonRow { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  .kpiGrid { grid-template-columns: repeat(2, 1fr); }
+  .predictionStrip { grid-template-columns: 1fr; }
+  .factorRow { grid-template-columns: 1fr; gap: 4px; }
+  .factorWeight { text-align: left; }
+}
+
+@media (max-width: 480px) {
+  .kpiGrid { grid-template-columns: 1fr; }
+}

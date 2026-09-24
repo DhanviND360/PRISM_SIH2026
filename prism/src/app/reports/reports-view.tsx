@@ -5,6 +5,7 @@ import Link from "next/link";
 import { formatCr, type PortfolioAnalytics } from "@/analytics/portfolio-stats";
 import type { Project } from "@/types/project";
 import type { ProjectRiskAssessment } from "@/analytics/risk-engine";
+import { getMLBenchmarkReport, getCUFAttributionReport } from "@/ml-api";
 
 interface ReportsViewProps {
   projects: Project[];
@@ -12,11 +13,21 @@ interface ReportsViewProps {
   portfolioStats: PortfolioAnalytics;
 }
 
-type ReportType = "MPMR_FLASH" | "HIGH_RISK_DOSSIER" | "DIMENSION_MATRIX" | "DATA_AUDIT";
+type ReportType =
+  | "MPMR_FLASH"
+  | "HIGH_RISK_DOSSIER"
+  | "BENCHMARK_EVALUATION"
+  | "CUF_ATTRIBUTION"
+  | "DIMENSION_MATRIX"
+  | "DATA_AUDIT";
 
 export function ReportsView({ projects, assessments, portfolioStats }: ReportsViewProps) {
   const [selectedReport, setSelectedReport] = useState<ReportType>("MPMR_FLASH");
   const [isExporting, setIsExporting] = useState(false);
+
+  // ML Reports
+  const benchmarkReport = getMLBenchmarkReport();
+  const cufReport = getCUFAttributionReport();
 
   // Map project ID to assessment
   const assessmentMap = new Map<string, ProjectRiskAssessment>();
@@ -53,6 +64,18 @@ export function ReportsView({ projects, assessments, portfolioStats }: ReportsVi
         const overrunCr = Math.max(0, p.revisedCostCr - p.originalCostCr);
         const overrunPct = Math.round((p.costOverrunRatio - 1) * 100);
         csvContent += `"${p.name}","${p.sector}","${p.implementingAgency}",${p.originalCostCr},${p.revisedCostCr},${overrunCr},${overrunPct}%,${p.physicalProgressPct}%,"${p.revisedCompletionDate}",${p.isDelayed ? "YES" : "NO"},${a.overallScore}\n`;
+      });
+    } else if (selectedReport === "BENCHMARK_EVALUATION") {
+      filename = "statistical-vs-ml-benchmark-evaluation.csv";
+      csvContent += "Evaluation Metric,Conventional Statistical Baseline (EVM),PRISM Machine Learning,Gain Assessment\n";
+      benchmarkReport.comparisonTable.forEach((row) => {
+        csvContent += `"${row.metricName}","${row.conventionalStatistical}","${row.machineLearningModel}","${row.gainDescription}"\n`;
+      });
+    } else if (selectedReport === "CUF_ATTRIBUTION") {
+      filename = "cuf-feature-attribution-and-gaps.csv";
+      csvContent += "Field Name,Category,Variance Explained %,Status,Description\n";
+      cufReport.attributions.forEach((attr) => {
+        csvContent += `"${attr.fieldName}","${attr.category}",${attr.varianceExplainedPct}%,"${attr.dataStatus}","${attr.description}"\n`;
       });
     } else if (selectedReport === "DIMENSION_MATRIX") {
       filename = "risk-dimension-diagnostic-matrix.csv";
@@ -106,6 +129,8 @@ export function ReportsView({ projects, assessments, portfolioStats }: ReportsVi
           {[
             { id: "MPMR_FLASH", label: "MoSPI Flash Report (MPMR)", icon: "📊" },
             { id: "HIGH_RISK_DOSSIER", label: `High-Risk Exception Dossier (${highRiskProjects.length})`, icon: "⚠️" },
+            { id: "BENCHMARK_EVALUATION", label: "AI/ML vs. Stats Benchmark (Dim b)", icon: "⚡" },
+            { id: "CUF_ATTRIBUTION", label: "CUF Attribution & Roadmap (Dim c)", icon: "🎯" },
             { id: "DIMENSION_MATRIX", label: "Risk Dimension Matrix", icon: "📐" },
             { id: "DATA_AUDIT", label: "PAIMANA Data Audit", icon: "📋" },
           ].map((tab) => {
@@ -214,6 +239,8 @@ export function ReportsView({ projects, assessments, portfolioStats }: ReportsVi
               <div style={{ fontSize: "1.2rem", fontWeight: 800, color: "#0f172a", marginTop: "4px" }}>
                 {selectedReport === "MPMR_FLASH" && "Monthly Project Monitoring Report (MPMR) — Executive Flash"}
                 {selectedReport === "HIGH_RISK_DOSSIER" && "High-Risk Infrastructure Projects Exception Dossier"}
+                {selectedReport === "BENCHMARK_EVALUATION" && "Empirical Evaluation: AI/ML vs. Conventional Statistical Methods (Dimension b)"}
+                {selectedReport === "CUF_ATTRIBUTION" && "Common Upload Form (CUF) Attribution & Modernization Roadmap (Dimension c)"}
                 {selectedReport === "DIMENSION_MATRIX" && "Comprehensive Risk Dimension Diagnostic Matrix"}
                 {selectedReport === "DATA_AUDIT" && "PAIMANA Data Quality & Provenance Audit Report"}
               </div>
@@ -468,6 +495,176 @@ export function ReportsView({ projects, assessments, portfolioStats }: ReportsVi
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* ── Report Content: Mode 5 (Technical Dimension b: AI/ML vs. Stats) ── */}
+        {selectedReport === "BENCHMARK_EVALUATION" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+            {/* Executive Callout */}
+            <div style={{ padding: "14px 16px", backgroundColor: "#f0fdf4", border: "1px solid #bbf7d0", borderLeft: "5px solid #16a34a", borderRadius: "var(--radius-sm)" }}>
+              <div style={{ fontSize: "0.85rem", fontWeight: 800, color: "#166534", marginBottom: "4px" }}>
+                Executive Assessment — Significant Empirical Gains of AI/ML over Conventional Statistical Baselines
+              </div>
+              <p style={{ fontSize: "0.78rem", color: "#14532d", lineHeight: 1.55 }}>
+                {benchmarkReport.executiveSummary}
+              </p>
+            </div>
+
+            {/* Benchmark Metrics Comparison Table */}
+            <div>
+              <h3 style={{ fontSize: "0.95rem", fontWeight: 700, color: "#0f172a", marginBottom: "10px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Empirical Evaluation Table (n = {benchmarkReport.datasetSize} PAIMANA Project Records)
+              </h3>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
+                <thead>
+                  <tr style={{ backgroundColor: "#f1f5f9", borderBottom: "2px solid #cbd5e1" }}>
+                    <th style={{ padding: "10px 12px", textAlign: "left", color: "#475569" }}>EVALUATION DIMENSION / METRIC</th>
+                    <th style={{ padding: "10px 12px", textAlign: "left", color: "#475569" }}>CONVENTIONAL STATISTICAL (EVM)</th>
+                    <th style={{ padding: "10px 12px", textAlign: "left", color: "#475569" }}>PRISM MACHINE LEARNING</th>
+                    <th style={{ padding: "10px 12px", textAlign: "left", color: "#475569" }}>EMPIRICAL GAIN</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {benchmarkReport.comparisonTable.map((row, idx) => (
+                    <tr key={idx} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                      <td style={{ padding: "10px 12px", fontWeight: 700, color: "#0f172a" }}>
+                        {row.metricName}
+                      </td>
+                      <td style={{ padding: "10px 12px", color: "#64748b" }}>
+                        {row.conventionalStatistical}
+                      </td>
+                      <td style={{ padding: "10px 12px", fontWeight: 700, color: "#1e40af" }}>
+                        {row.machineLearningModel}
+                      </td>
+                      <td style={{ padding: "10px 12px" }}>
+                        <span style={{ display: "inline-block", padding: "2px 8px", borderRadius: "var(--radius-xs)", backgroundColor: "#dcfce7", color: "#166534", fontWeight: 700, fontSize: "0.72rem" }}>
+                          ✓ {row.gainDescription}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Methodology & Model Architecture Cards */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div style={{ padding: "12px", border: "1px solid #e2e8f0", backgroundColor: "#f8fafc", borderRadius: "var(--radius-sm)" }}>
+                <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "#0f172a", marginBottom: "6px" }}>
+                  Conventional Statistical Models Evaluated:
+                </div>
+                <ul style={{ fontSize: "0.72rem", color: "#475569", paddingLeft: "16px", lineHeight: 1.6 }}>
+                  {benchmarkReport.statisticalModelsEvaluated.map((m, i) => (
+                    <li key={i}>{m}</li>
+                  ))}
+                </ul>
+              </div>
+
+              <div style={{ padding: "12px", border: "1px solid #bfdbfe", backgroundColor: "#eff6ff", borderRadius: "var(--radius-sm)" }}>
+                <div style={{ fontSize: "0.76rem", fontWeight: 700, color: "#1e40af", marginBottom: "6px" }}>
+                  PRISM Machine Learning Models Evaluated:
+                </div>
+                <ul style={{ fontSize: "0.72rem", color: "#1e3a8a", paddingLeft: "16px", lineHeight: 1.6 }}>
+                  {benchmarkReport.mlModelsEvaluated.map((m, i) => (
+                    <li key={i}>{m}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            <div style={{ fontSize: "0.7rem", color: "#64748b", fontStyle: "italic" }}>
+              Note: {benchmarkReport.methodologyNote}
+            </div>
+          </div>
+        )}
+
+        {/* ── Report Content: Mode 6 (Technical Dimension c: CUF Attribution) ─ */}
+        {selectedReport === "CUF_ATTRIBUTION" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+            {/* Variance Ratio KPI Cards */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+              <div style={{ padding: "14px", backgroundColor: "#eff6ff", border: "1px solid #bfdbfe", borderRadius: "var(--radius-sm)" }}>
+                <div style={{ fontSize: "0.72rem", color: "#1e40af", fontWeight: 700, textTransform: "uppercase" }}>
+                  Variance Explained by Current CUF Fields
+                </div>
+                <div style={{ fontSize: "2rem", fontWeight: 800, color: "#1e40af", marginTop: "4px" }}>
+                  {cufReport.totalVarianceExplainedByCurrentCUF}%
+                </div>
+                <div style={{ fontSize: "0.72rem", color: "#3b82f6", marginTop: "2px" }}>
+                  Approved Sanction, Physical Progress %, Target Timeline, and Sector
+                </div>
+              </div>
+
+              <div style={{ padding: "14px", backgroundColor: "#fff7ed", border: "1px solid #fed7aa", borderRadius: "var(--radius-sm)" }}>
+                <div style={{ fontSize: "0.72rem", color: "#9a3412", fontWeight: 700, textTransform: "uppercase" }}>
+                  Unexplained / Latent Variance (Uncaptured Factors)
+                </div>
+                <div style={{ fontSize: "2rem", fontWeight: 800, color: "#c2410c", marginTop: "4px" }}>
+                  {cufReport.totalVarianceUnexplainedOrLatent}%
+                </div>
+                <div style={{ fontSize: "0.72rem", color: "#ea580c", marginTop: "2px" }}>
+                  Land Acquisition ROW %, Statutory Clearances, Contractor Liquidity, and Litigation
+                </div>
+              </div>
+            </div>
+
+            {/* Feature Attribution Breakdown Table */}
+            <div>
+              <h3 style={{ fontSize: "0.95rem", fontWeight: 700, color: "#0f172a", marginBottom: "10px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Variance Attribution by Monitoring Field
+              </h3>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
+                <thead>
+                  <tr style={{ backgroundColor: "#f1f5f9", borderBottom: "2px solid #cbd5e1" }}>
+                    <th style={{ padding: "8px 10px", textAlign: "left", color: "#475569" }}>FIELD NAME</th>
+                    <th style={{ padding: "8px 10px", textAlign: "center", color: "#475569" }}>CATEGORY</th>
+                    <th style={{ padding: "8px 10px", textAlign: "center", color: "#475569" }}>VARIANCE EXPLAINED</th>
+                    <th style={{ padding: "8px 10px", textAlign: "center", color: "#475569" }}>INGESTION STATUS</th>
+                    <th style={{ padding: "8px 10px", textAlign: "left", color: "#475569" }}>RISK IMPACT MECHANISM</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cufReport.attributions.map((attr, idx) => (
+                    <tr key={idx} style={{ borderBottom: "1px solid #e2e8f0" }}>
+                      <td style={{ padding: "8px 10px", fontWeight: 700, color: "#0f172a" }}>
+                        {attr.fieldName}
+                      </td>
+                      <td style={{ padding: "8px 10px", textAlign: "center" }}>
+                        <span style={{ display: "inline-block", padding: "1px 6px", borderRadius: "var(--radius-xs)", backgroundColor: attr.category === "CURRENT_CUF" ? "#dbeafe" : "#fef3c7", color: attr.category === "CURRENT_CUF" ? "#1e40af" : "#92400e", fontWeight: 700, fontSize: "0.68rem" }}>
+                          {attr.category === "CURRENT_CUF" ? "Current CUF" : "Latent / Uncaptured"}
+                        </span>
+                      </td>
+                      <td style={{ padding: "8px 10px", textAlign: "center", fontWeight: 800, color: attr.category === "CURRENT_CUF" ? "#1e40af" : "#c2410c" }}>
+                        {attr.varianceExplainedPct}%
+                      </td>
+                      <td style={{ padding: "8px 10px", textAlign: "center" }}>
+                        <span style={{ display: "inline-block", padding: "1px 6px", borderRadius: "var(--radius-xs)", backgroundColor: attr.dataStatus === "CAPTURED" ? "#dcfce7" : "#fee2e2", color: attr.dataStatus === "CAPTURED" ? "#166534" : "#991b1b", fontWeight: 700, fontSize: "0.65rem" }}>
+                          {attr.dataStatus}
+                        </span>
+                      </td>
+                      <td style={{ padding: "8px 10px", color: "#475569", lineHeight: 1.4 }}>
+                        {attr.description}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Policy Recommendations for MoSPI IPMD */}
+            <div style={{ padding: "14px", border: "1px solid #bfdbfe", backgroundColor: "#f8fafc", borderRadius: "var(--radius-sm)" }}>
+              <div style={{ fontSize: "0.82rem", fontWeight: 800, color: "#0f172a", marginBottom: "8px" }}>
+                Target Policy Recommendations for MoSPI IPMD (CUF Modernization Roadmap)
+              </div>
+              <ul style={{ fontSize: "0.74rem", color: "#334155", paddingLeft: "18px", lineHeight: 1.6 }}>
+                {cufReport.policyRecommendationsForMoSPI.map((rec, i) => (
+                  <li key={i}>
+                    <strong>P{i + 1}:</strong> {rec}
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         )}
 

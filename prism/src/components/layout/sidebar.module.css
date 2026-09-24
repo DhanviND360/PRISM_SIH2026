@@ -6,29 +6,71 @@
   flex-direction: column;
   flex-shrink: 0;
   min-height: 100vh;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow-x: hidden;
+  z-index: 30;
 }
 
+.sidebarCollapsed {
+  width: 70px;
+}
+
+/* Brand Header */
 .brandHeader {
-  padding: var(--space-3) var(--space-2-5);
+  padding: 14px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid var(--sidebar-border);
+  min-height: 72px;
+  transition: padding 0.25s ease;
+}
+
+.sidebarCollapsed .brandHeader {
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 0 12px;
+  gap: 10px;
+}
+
+.brandLink {
   display: flex;
   align-items: center;
   gap: var(--space-1-5);
-  border-bottom: 1px solid var(--sidebar-border);
+  text-decoration: none;
+  min-width: 0;
+  border-radius: var(--radius-sm);
+  padding: 4px;
+  transition: background-color 0.15s ease;
+}
+
+.brandLink:hover {
+  background-color: rgba(255, 255, 255, 0.05);
 }
 
 .emblem {
-  width: 38px;
-  height: 38px;
+  width: 36px;
+  height: 36px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fbbf24;
+  transition: transform 0.2s ease;
+}
+
+.brandLink:hover .emblem {
+  transform: scale(1.05);
 }
 
 .brandText {
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .countryTitle {
@@ -45,6 +87,47 @@
   margin-top: 2px;
 }
 
+/* Permanent Collapsible Arrow Button - ALWAYS Visible */
+.collapseArrowBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-xs);
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  color: var(--sidebar-text);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  flex-shrink: 0;
+}
+
+.sidebarCollapsed .collapseArrowBtn {
+  width: 30px;
+  height: 30px;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.collapseArrowBtn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.28);
+  transform: scale(1.08);
+}
+
+.collapseArrowBtn:active {
+  transform: scale(0.95);
+}
+
+.arrowIcon {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.2s ease;
+}
+
+/* Navigation List */
 .navList {
   list-style: none;
   padding: var(--space-2) var(--space-1-5);
@@ -52,6 +135,10 @@
   flex-direction: column;
   gap: 4px;
   flex: 1;
+}
+
+.sidebarCollapsed .navList {
+  padding: var(--space-2) 6px;
 }
 
 .navItem {
@@ -69,6 +156,15 @@
   font-weight: 500;
   transition: all 0.15s ease;
   position: relative;
+  text-decoration: none;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.sidebarCollapsed .navLink {
+  justify-content: center;
+  padding: 12px 0;
+  gap: 0;
 }
 
 .navLink:hover {
@@ -93,6 +189,15 @@
   border-radius: 0 2px 2px 0;
 }
 
+.iconWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
 .navIcon {
   width: 18px;
   height: 18px;
@@ -104,6 +209,12 @@
   color: #10b981;
 }
 
+.navText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .navBadge {
   margin-left: auto;
   font-size: 0.65rem;
@@ -113,23 +224,11 @@
   color: var(--sidebar-text);
 }
 
+/* Footer (Clean, no buttons at bottom) */
 .sidebarFooter {
   padding: var(--space-3) var(--space-2-5);
   border-top: 1px solid var(--sidebar-border);
-  font-size: 0.75rem;
-}
-
-.paimanaLink {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: #93c5fd;
-  font-weight: 500;
-  margin-bottom: var(--space-1);
-}
-
-.paimanaLink:hover {
-  text-decoration: underline;
+  text-align: center;
 }
 
 .tagline {
@@ -140,17 +239,20 @@
 
 @media (max-width: 900px) {
   .sidebar {
-    width: 68px;
+    width: 70px;
   }
-  .brandText, .sidebarFooter, .navText, .navBadge {
+  .brandText, .tagline, .navText, .navBadge {
     display: none;
   }
   .brandHeader {
+    flex-direction: column;
+    align-items: center;
     justify-content: center;
-    padding: var(--space-2);
+    padding: 12px 0;
+    gap: 8px;
   }
   .navLink {
     justify-content: center;
-    padding: 12px;
+    padding: 12px 0;
   }
 }

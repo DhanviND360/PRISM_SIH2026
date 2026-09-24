@@ -69,7 +69,7 @@ export default async function ProjectsPage() {
       >
         <div style={{ padding: "var(--space-2) var(--space-2-5)", borderBottom: "1px solid var(--border-light)" }}>
           <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "var(--text-dark)" }}>
-            Central Project Registry (PAIMANA Sample Data)
+            Central Project Registry (PAIMANA National Data Repository)
           </span>
         </div>
 

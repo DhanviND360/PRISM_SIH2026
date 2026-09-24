@@ -1,11 +1,26 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { SidebarProvider, useSidebar } from "./sidebar-context";
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 
 interface AppLayoutWrapperProps {
   children: React.ReactNode;
+}
+
+function DashboardLayout({ children }: AppLayoutWrapperProps) {
+  const { isCollapsed } = useSidebar();
+
+  return (
+    <div className={`app-container ${isCollapsed ? "app-sidebar-collapsed" : ""}`}>
+      <Sidebar />
+      <div className="main-content">
+        <Topbar />
+        <main className="page-body">{children}</main>
+      </div>
+    </div>
+  );
 }
 
 export function AppLayoutWrapper({ children }: AppLayoutWrapperProps) {
@@ -19,12 +34,8 @@ export function AppLayoutWrapper({ children }: AppLayoutWrapperProps) {
   }
 
   return (
-    <div className="app-container">
-      <Sidebar />
-      <div className="main-content">
-        <Topbar />
-        <main className="page-body">{children}</main>
-      </div>
-    </div>
+    <SidebarProvider>
+      <DashboardLayout>{children}</DashboardLayout>
+    </SidebarProvider>
   );
 }

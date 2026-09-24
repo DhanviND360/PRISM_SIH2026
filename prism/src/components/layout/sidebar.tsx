@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSidebar } from "./sidebar-context";
 import styles from "./sidebar.module.css";
 
 interface NavItem {
@@ -14,6 +15,7 @@ interface NavItem {
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { isCollapsed, toggleSidebar } = useSidebar();
 
   const navItems: NavItem[] = [
     {
@@ -63,6 +65,17 @@ export function Sidebar() {
       ),
     },
     {
+      label: "iPRISM AI",
+      href: "/iprism",
+      isAvailable: true,
+      badge: "AI",
+      icon: (
+        <svg className={styles.navIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+        </svg>
+      ),
+    },
+    {
       label: "Reports",
       href: "/reports",
       isAvailable: true,
@@ -77,95 +90,115 @@ export function Sidebar() {
     },
     {
       label: "Data Explorer",
-      href: "#",
-      isAvailable: false,
+      href: "/data-explorer",
+      isAvailable: true,
       icon: (
         <svg className={styles.navIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-        </svg>
-      ),
-    },
-    {
-      label: "Alerts",
-      href: "#",
-      isAvailable: false,
-      badge: "3",
-      icon: (
-        <svg className={styles.navIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-          <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+          <ellipse cx="12" cy="5" rx="9" ry="3" />
+          <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+          <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
         </svg>
       ),
     },
   ];
 
   return (
-    <aside className={styles.sidebar}>
+    <aside
+      className={`${styles.sidebar} ${isCollapsed ? styles.sidebarCollapsed : ""}`}
+      aria-label="Main Navigation"
+    >
+      {/* Brand Header with clickable Logo navigating to Landing Page and Permanent Collapsible Arrow */}
       <div className={styles.brandHeader}>
-        <div className={styles.emblem} aria-hidden="true">
-          {/* Government of India Emblem Symbol */}
-          <svg viewBox="0 0 48 48" fill="currentColor" width="34" height="34">
-            <circle cx="24" cy="24" r="21" fill="#0f172a" stroke="#d97706" strokeWidth="2" />
-            <circle cx="24" cy="24" r="6" fill="none" stroke="#d97706" strokeWidth="1.5" />
-            <path d="M24 6 v6 M24 36 v6 M6 24 h6 M36 24 h6 M11 11 l4 4 M33 33 l4 4 M11 37 l4-4 M33 15 l4-4" stroke="#d97706" strokeWidth="1.5" />
+        <Link
+          href="/"
+          className={styles.brandLink}
+          title="Return to PRISM Landing Page"
+          id="sidebar-logo-link"
+        >
+          <div className={styles.emblem} aria-hidden="true">
+            {/* Government of India Emblem Symbol */}
+            <svg viewBox="0 0 48 48" fill="currentColor" width="34" height="34">
+              <circle cx="24" cy="24" r="21" fill="#0f172a" stroke="#d97706" strokeWidth="2" />
+              <circle cx="24" cy="24" r="6" fill="none" stroke="#d97706" strokeWidth="1.5" />
+              <path
+                d="M24 6 v6 M24 36 v6 M6 24 h6 M36 24 h6 M11 11 l4 4 M33 33 l4 4 M11 37 l4-4 M33 15 l4-4"
+                stroke="#d97706"
+                strokeWidth="1.5"
+              />
+            </svg>
+          </div>
+          {!isCollapsed && (
+            <div className={styles.brandText}>
+              <span className={styles.countryTitle}>Government of India</span>
+              <span className={styles.ministrySubtitle}>
+                Ministry of Statistics &amp; Programme Implementation
+              </span>
+            </div>
+          )}
+        </Link>
+
+        {/* Permanent Collapsible Arrow: Stays ON at all times, points LEFT (<) when opened, RIGHT (>) when closed */}
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          className={styles.collapseArrowBtn}
+          title={isCollapsed ? "Expand Sidebar (Ctrl+B)" : "Collapse Sidebar (Ctrl+B)"}
+          aria-label={isCollapsed ? "Expand navigation sidebar" : "Collapse navigation sidebar"}
+          id="sidebar-collapse-arrow"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className={styles.arrowIcon}
+          >
+            {isCollapsed ? (
+              /* Points RIGHT (>) when closed/collapsed to expand */
+              <polyline points="9 18 15 12 9 6" />
+            ) : (
+              /* Points LEFT (<) when opened/expanded to collapse */
+              <polyline points="15 18 9 12 15 6" />
+            )}
           </svg>
-        </div>
-        <div className={styles.brandText}>
-          <span className={styles.countryTitle}>Government of India</span>
-          <span className={styles.ministrySubtitle}>
-            Ministry of Statistics &amp; Programme Implementation
-          </span>
-        </div>
+        </button>
       </div>
 
+      {/* Navigation Links */}
       <ul className={styles.navList}>
         {navItems.map((item) => {
           const isActive =
-            item.href !== "#" && (pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href)));
-
-          if (!item.isAvailable) {
-            return (
-              <li key={item.label} className={styles.navItem}>
-                <span
-                  className={styles.navLink}
-                  style={{ opacity: 0.5, cursor: "not-allowed" }}
-                  title="Coming in later phases"
-                >
-                  {item.icon}
-                  <span className={styles.navText}>{item.label}</span>
-                  {item.badge && <span className={styles.navBadge}>{item.badge}</span>}
-                </span>
-              </li>
-            );
-          }
+            item.href !== "#" &&
+            (pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href)));
 
           return (
             <li key={item.label} className={styles.navItem}>
               <Link
                 href={item.href}
                 className={`${styles.navLink} ${isActive ? styles.navLinkActive : ""}`}
+                title={isCollapsed ? item.label : undefined}
+                aria-current={isActive ? "page" : undefined}
               >
-                {item.icon}
-                <span className={styles.navText}>{item.label}</span>
-                {item.badge && <span className={styles.navBadge}>{item.badge}</span>}
+                <span className={styles.iconWrapper}>{item.icon}</span>
+                {!isCollapsed && <span className={styles.navText}>{item.label}</span>}
+                {!isCollapsed && item.badge && <span className={styles.navBadge}>{item.badge}</span>}
               </Link>
             </li>
           );
         })}
       </ul>
 
-      <div className={styles.sidebarFooter}>
-        <Link href="/" className={styles.paimanaLink} style={{ textDecoration: "none" }} title="Return to Public Portal">
-          <span>← Public Landing Page</span>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M7 17l9.2-9.2M17 17V7H7" />
-          </svg>
-        </Link>
-        <p className={styles.tagline}>
-          A More Accountable<br />
-          A More Developed India
-        </p>
-      </div>
+      {/* Clean Footer Area: No buttons at bottom */}
+      {!isCollapsed && (
+        <div className={styles.sidebarFooter}>
+          <p className={styles.tagline}>
+            A More Accountable<br />
+            A More Developed India
+          </p>
+        </div>
+      )}
     </aside>
   );
 }
